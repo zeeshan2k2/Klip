@@ -19,11 +19,14 @@ private final class MainAppLoginItem: LoginItemManaging {
 @Observable
 final class LaunchAtLoginController {
     private let service: LoginItemManaging
+    private let defaults: UserDefaults
+    private let defaultAppliedKey = "Klip.launchAtLoginDefaultApplied"
     private(set) var status: SMAppService.Status = .notRegistered
     private(set) var errorMessage: String?
 
-    init(service: LoginItemManaging? = nil) {
+    init(service: LoginItemManaging? = nil, defaults: UserDefaults = .standard) {
         self.service = service ?? MainAppLoginItem()
+        self.defaults = defaults
         refresh()
     }
 
@@ -40,7 +43,20 @@ final class LaunchAtLoginController {
 
     func refresh() { status = service.status }
 
+    /// Called only by production startup. Never override a later user opt-out.
+    func enableByDefaultIfNeeded() {
+        guard !defaults.bool(forKey: defaultAppliedKey) else { return }
+        refresh()
+        if status == .notRegistered { updateRegistration(true) }
+        if isEnabled { defaults.set(true, forKey: defaultAppliedKey) }
+    }
+
     func setEnabled(_ enabled: Bool) {
+        defaults.set(true, forKey: defaultAppliedKey)
+        updateRegistration(enabled)
+    }
+
+    private func updateRegistration(_ enabled: Bool) {
         errorMessage = nil
         do {
             if enabled { try service.register() }

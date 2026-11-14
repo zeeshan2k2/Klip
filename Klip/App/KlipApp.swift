@@ -31,6 +31,7 @@ final class KlipAppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         applyAppIcon()
+        coordinator.applyFirstLaunchDefaults()
         coordinator.start()
     }
 

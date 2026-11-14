@@ -5,21 +5,22 @@ import UniformTypeIdentifiers
 @MainActor
 final class SettingsController: NSWindowController, NSWindowDelegate {
     private let model: HistoryViewModel
-    let login = LaunchAtLoginController()
+    let login: LaunchAtLoginController
 
-    init(model: HistoryViewModel) {
+    init(model: HistoryViewModel, login: LaunchAtLoginController? = nil) {
         self.model = model
-        let panel = SettingsPanel(contentRect: NSRect(x: 0, y: 0, width: 560, height: 560),
-                                  styleMask: [.titled, .closable, .resizable, .nonactivatingPanel], backing: .buffered, defer: false)
+        self.login = login ?? LaunchAtLoginController()
+        let panel = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 560),
+                                  styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
         super.init(window: panel)
         panel.title = "Klip Settings"
         panel.delegate = self
         panel.isReleasedWhenClosed = false
-        panel.level = .floating
+        panel.level = .normal
         panel.hidesOnDeactivate = false
-        panel.collectionBehavior = [.canJoinAllSpaces, .canJoinAllApplications, .fullScreenAuxiliary]
+        panel.collectionBehavior = [.managed, .fullScreenNone, .fullScreenDisallowsTiling]
         panel.contentMinSize = NSSize(width: 520, height: 480)
-        panel.contentView = NSHostingView(rootView: SettingsView(preferences: model.preferences, model: model, login: login,
+        panel.contentView = NSHostingView(rootView: SettingsView(preferences: model.preferences, model: model, login: self.login,
             onAddExclusion: { [weak self] in self?.addExcludedApplications() }))
         panel.center()
     }
@@ -29,8 +30,8 @@ final class SettingsController: NSWindowController, NSWindowDelegate {
     override func showWindow(_ sender: Any?) {
         login.refresh()
         super.showWindow(sender)
-        window?.orderFrontRegardless()
-        window?.makeKey()
+        NSApp.activate()
+        window?.makeKeyAndOrderFront(sender)
     }
 
     func windowDidBecomeKey(_ notification: Notification) { login.refresh() }
@@ -54,9 +55,4 @@ final class SettingsController: NSWindowController, NSWindowDelegate {
             }
         }
     }
-}
-
-private final class SettingsPanel: NSPanel {
-    override var canBecomeKey: Bool { true }
-    override var canBecomeMain: Bool { false }
 }

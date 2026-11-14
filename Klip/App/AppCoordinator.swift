@@ -8,6 +8,7 @@ final class AppCoordinator {
     private let monitor: ClipboardMonitor
     private let historyPanel: HistoryPanelController
     private let feedback: FeedbackController
+    private let login = LaunchAtLoginController()
     private var settingsPanel: SettingsController?
     private var menuBar: MenuBarController?
     private var hotKey: HistoryHotKey?
@@ -48,6 +49,8 @@ final class AppCoordinator {
         preferences.onSettingsChanged = { [weak self] in self?.applyPreferences() }
     }
 
+    func applyFirstLaunchDefaults() { login.enableByDefaultIfNeeded() }
+
     func start() {
         guard !started else { return }
         started = true
@@ -81,7 +84,7 @@ final class AppCoordinator {
 
     func showSettings() {
         historyPanel.dismiss()
-        if settingsPanel == nil { settingsPanel = SettingsController(model: model) }
+        if settingsPanel == nil { settingsPanel = SettingsController(model: model, login: login) }
         settingsPanel?.showWindow(nil)
     }
 

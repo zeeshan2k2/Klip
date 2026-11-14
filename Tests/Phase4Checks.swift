@@ -68,10 +68,12 @@ struct Phase4Checks {
         upgraded.historyLimit = 500
         try check(PreferencesStore(defaults: legacyDefaults).historyLimit == 500)
         let preferences = PreferencesStore(defaults: defaults)
-        try check(preferences.saveHistory && preferences.historyLimit == 1000 && preferences.retentionDays == 7)
+        try check(preferences.saveHistory && preferences.historyLimit == 1000 && preferences.retentionDays == 0 && preferences.maximumAge == nil)
         try check(preferences.feedbackMode == .visual && preferences.historyShortcut == .commandShiftV)
         try check(preferences.expandedPreviewDuration == 1.0)
-        try check(!preferences.autoExpandCopyPreview)
+        try check(preferences.autoExpandCopyPreview && preferences.popupDuration == 1.0)
+        preferences.autoExpandCopyPreview = false
+        try check(!PreferencesStore(defaults: defaults).autoExpandCopyPreview, "Explicit preview-off must survive relaunch")
         preferences.autoExpandCopyPreview = true
         preferences.saveHistory = false
         try check(!PreferencesStore(defaults: defaults).saveHistory, "An explicit history-off choice must survive relaunch")
@@ -104,7 +106,7 @@ struct Phase4Checks {
         preferences.historyLimit = -1
         preferences.retentionDays = -1
         preferences.popupDuration = .infinity
-        try check(preferences.historyLimit == 1 && preferences.retentionDays == 0 && preferences.popupDuration == 1.15)
+        try check(preferences.historyLimit == 1 && preferences.retentionDays == 0 && preferences.popupDuration == 1.0)
         print("PASS: first-launch saving and explicit opt-out, saved settings, and invalid preference bounds")
 
         // Launch two separate executables to verify save/restore across process exit.
@@ -250,9 +252,9 @@ struct Phase4Checks {
         print("PASS: actual coordinator settings wiring, opt-in existing data, saved new captures, pause, exclusions, hidden-preview independence, and immediate retention")
 
         let fixture = LoginFixture()
-        let login = LaunchAtLoginController(service: fixture)
+        let login = LaunchAtLoginController(service: fixture, defaults: defaults)
         try check(!login.isEnabled)
-        login.setEnabled(true)
+        login.enableByDefaultIfNeeded()
         try check(login.status == .requiresApproval && login.isEnabled)
         fixture.status = .enabled
         login.refresh()
@@ -263,7 +265,18 @@ struct Phase4Checks {
         fixture.fail = false
         login.setEnabled(false)
         try check(login.status == .notRegistered && !login.isEnabled)
-        try check(fixture.registrations == 1)
+        login.enableByDefaultIfNeeded()
+        try check(fixture.registrations == 1 && !login.isEnabled, "Startup must preserve explicit login opt-out")
+        let failedDefaults = UserDefaults(suiteName: suite + ".login-failure")!
+        defer { failedDefaults.removePersistentDomain(forName: suite + ".login-failure") }
+        let failedFixture = LoginFixture()
+        failedFixture.fail = true
+        let failedLogin = LaunchAtLoginController(service: failedFixture, defaults: failedDefaults)
+        failedLogin.enableByDefaultIfNeeded()
+        try check(failedLogin.errorMessage != nil && !failedLogin.isEnabled)
+        failedFixture.fail = false
+        failedLogin.enableByDefaultIfNeeded()
+        try check(failedLogin.isEnabled && failedFixture.registrations == 1, "Failed default registration must be retryable")
         print("PASS: native login-item status model, approval state, and registration failure reporting with no system changes")
 
         // Render native Settings forms and a hidden-preview history panel using known fixtures.
@@ -272,6 +285,13 @@ struct Phase4Checks {
         renderPreferences.retentionDays = 7
         renderPreferences.hidePreviews = true
         let renderModel = HistoryViewModel(store: ClipboardHistoryStore(items: HistoryItem.examples), preferences: renderPreferences)
+        let settings = SettingsController(model: renderModel, login: login)
+        let settingsWindow = settings.window!
+        try check(settingsWindow.level == .normal && !settingsWindow.styleMask.contains(.nonactivatingPanel))
+        try check(settingsWindow.collectionBehavior.contains([.managed, .fullScreenNone, .fullScreenDisallowsTiling]))
+        try check(settingsWindow.collectionBehavior.intersection([.canJoinAllSpaces, .canJoinAllApplications, .fullScreenAuxiliary, .moveToActiveSpace]).isEmpty,
+                  "Settings must stay on desktop Spaces rather than join fullscreen apps")
+        print("PASS: Settings uses a normal desktop window without fullscreen overlay behavior")
         for (name, tab) in [("history", SettingsTab.history), ("privacy", .privacy), ("feedback", .feedback), ("general", .general)] {
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 560), styleMask: [.borderless], backing: .buffered, defer: false)
             let hosting = NSHostingView(rootView: SettingsView(preferences: renderPreferences, model: renderModel, login: login, onAddExclusion: {}, selectedTab: tab))

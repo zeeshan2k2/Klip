@@ -22,7 +22,7 @@
 - **Find what you copied.** Search text, links, code, rich text, images, PDFs, files, and folders in one history.
 - **Keep the original formats.** Copy items back with their available native clipboard representations, including grouped files.
 - **A quiet confirmation.** Get a small animated copy indicator beneath the notch, or show a content preview automatically. Displays without a notch work too.
-- **Preview before pasting.** See image thumbnails, PDF previews, and native macOS file icons. Double-click an entry for a closer look.
+- **Preview before pasting.** See image thumbnails, PDF previews, and native macOS file icons. Double-click an entry for a closecr look.
 - **Stay on the keyboard.** Open history with a global shortcut, navigate results, and copy an item without reaching for the mouse.
 - **Pick up where you left off.** History is saved between launches by default, with up to 1,000 entries and configurable retention.
 - **Make it yours.** Adjust sounds, volume, preview duration, appearance, and the global shortcut. Resize and move the history panel; Klip remembers it.
@@ -64,7 +64,7 @@ Copy something as usual, then press **⌘⇧V** or choose **Show Clipboard** fro
 | Close history | Escape or click outside |
 | Open Settings | Gear button, or ⌘, while history has focus |
 
-Click the notch indicator to preview your latest copy. Prefer seeing the content immediately? Enable automatic previews in Settings. Klip then shows the preview directly, without the copy indicator first.
+Content previews appear automatically after copying by default, without showing the copy indicator first. Turn off automatic previews in Settings to use the compact indicator instead; click it to preview your latest copy.
 
 ### Defaults
 
@@ -72,12 +72,14 @@ Click the notch indicator to preview your latest copy. Prefer seeing the content
 | --- | --- |
 | Save history between launches | On |
 | History limit | 1,000 items |
-| Retention | 7 days |
+| Retention | Until deleted |
 | Copy feedback | Visual only |
-| Automatic content previews | Off |
+| Automatic content previews | On |
 | Content preview duration | 1 second; adjustable from 1–30 seconds |
+| Copy icon duration | 1 second |
 | Copy sound volume | 50% |
 | Delete sound | On |
+| Open Klip at login | On, subject to macOS approval |
 
 ## Privacy
 

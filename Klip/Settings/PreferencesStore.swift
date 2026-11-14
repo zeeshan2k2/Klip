@@ -120,7 +120,7 @@ final class PreferencesStore {
     var popupDuration: Double {
         didSet {
             if !popupDuration.isFinite || !(0.5...3).contains(popupDuration) {
-                popupDuration = popupDuration.isFinite ? min(3, max(0.5, popupDuration)) : 1.15
+                popupDuration = popupDuration.isFinite ? min(3, max(0.5, popupDuration)) : 1.0
             }
             defaults.set(popupDuration, forKey: "Klip.popupDuration")
             onSettingsChanged?()
@@ -154,7 +154,7 @@ final class PreferencesStore {
         let volume = defaults.object(forKey: "Klip.copySoundVolume") == nil ? 0.50 : defaults.double(forKey: "Klip.copySoundVolume")
         copySoundVolume = volume.isFinite ? min(1, max(0, volume)) : 0.50
         deletionSoundEnabled = defaults.object(forKey: "Klip.deletionSoundEnabled") == nil ? true : defaults.bool(forKey: "Klip.deletionSoundEnabled")
-        autoExpandCopyPreview = defaults.bool(forKey: "Klip.autoExpandCopyPreview")
+        autoExpandCopyPreview = defaults.object(forKey: "Klip.autoExpandCopyPreview") == nil ? true : defaults.bool(forKey: "Klip.autoExpandCopyPreview")
         saveHistory = defaults.object(forKey: "Klip.saveHistory") == nil ? true : defaults.bool(forKey: "Klip.saveHistory")
         let storedLimit = defaults.object(forKey: "Klip.historyLimit") as? Int
         let upgradeLimit = !defaults.bool(forKey: "Klip.historyLimit1000Applied")
@@ -163,13 +163,13 @@ final class PreferencesStore {
         historyLimit = initialLimit
         if upgradeLimit { defaults.set(initialLimit, forKey: "Klip.historyLimit") }
         defaults.set(true, forKey: "Klip.historyLimit1000Applied")
-        retentionDays = defaults.object(forKey: "Klip.retentionDays") == nil ? 7 : min(365, max(0, defaults.integer(forKey: "Klip.retentionDays")))
+        retentionDays = defaults.object(forKey: "Klip.retentionDays") == nil ? 0 : min(365, max(0, defaults.integer(forKey: "Klip.retentionDays")))
         monitoringPaused = defaults.bool(forKey: "Klip.monitoringPaused")
         hidePreviews = defaults.bool(forKey: "Klip.hidePreviews")
         let previewDuration = defaults.object(forKey: "Klip.expandedPreviewDuration") == nil ? 1.0 : defaults.double(forKey: "Klip.expandedPreviewDuration")
         expandedPreviewDuration = previewDuration.isFinite ? min(30, max(1, previewDuration)) : 1.0
-        let duration = defaults.object(forKey: "Klip.popupDuration") == nil ? 1.15 : defaults.double(forKey: "Klip.popupDuration")
-        popupDuration = duration.isFinite ? min(3, max(0.5, duration)) : 1.15
+        let duration = defaults.object(forKey: "Klip.popupDuration") == nil ? 1.0 : defaults.double(forKey: "Klip.popupDuration")
+        popupDuration = duration.isFinite ? min(3, max(0.5, duration)) : 1.0
         excludedApplicationIDs = defaults.stringArray(forKey: "Klip.excludedApplicationIDs") ?? [
             "com.1password.1password", "com.agilebits.onepassword7", "com.bitwarden.desktop", "com.apple.keychainaccess"
         ]
