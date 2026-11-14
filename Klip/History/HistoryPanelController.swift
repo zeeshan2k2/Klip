@@ -8,6 +8,9 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate {
     private let autosaveName: NSWindow.FrameAutosaveName
     private var localEventMonitor: Any?
     private var outsideClickMonitor: Any?
+    private var focusObservers: [NSObjectProtocol] = []
+    private var workspaceObservers: [NSObjectProtocol] = []
+    private var focusCheck: DispatchWorkItem?
 
     init(model: HistoryViewModel? = nil, frameAutosaveName: NSWindow.FrameAutosaveName = "Klip.HistoryPanel") {
         let model = model ?? HistoryViewModel()
@@ -96,12 +99,35 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) {
+        model.isPanelPresented = false
+        model.inspectedItem = nil
         window?.saveFrame(usingName: autosaveName)
         stopDismissalMonitors()
     }
 
     private func startDismissalMonitors() {
         stopDismissalMonitors()
+        focusObservers.append(NotificationCenter.default.addObserver(forName: NSWindow.didResignKeyNotification,
+            object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.scheduleFocusCheck() }
+        })
+        focusObservers.append(NotificationCenter.default.addObserver(forName: NSApplication.didResignActiveNotification,
+            object: NSApp, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.scheduleFocusCheck() }
+        })
+        let workspace = NSWorkspace.shared.notificationCenter
+        workspaceObservers.append(workspace.addObserver(forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil, queue: .main) { [weak self] notification in
+            MainActor.assumeIsolated {
+                guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                      app.processIdentifier != ProcessInfo.processInfo.processIdentifier else { return }
+                self?.dismiss()
+            }
+        })
+        workspaceObservers.append(workspace.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification,
+            object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.dismiss() }
+        })
         outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak self] _ in
             Task { @MainActor in self?.dismiss() }
         }
@@ -146,7 +172,31 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate {
         }
     }
 
+    private func scheduleFocusCheck() {
+        focusCheck?.cancel()
+        let check = DispatchWorkItem { [weak self] in
+            guard let self, let panel = self.window, panel.isVisible else { return }
+            // AppKit transfers key focus during sheets, sharing, and popovers.
+            // Wait one event-loop turn to distinguish those from Spotlight or
+            // another app taking keyboard focus without an outside mouse click.
+            if let key = NSApp.keyWindow,
+               key === panel || key.parent === panel || key.sheetParent === panel
+                   || panel.childWindows?.contains(where: { $0 === key }) == true || !key.canBecomeMain {
+                return
+            }
+            self.dismiss()
+        }
+        focusCheck = check
+        DispatchQueue.main.async(execute: check)
+    }
+
     private func stopDismissalMonitors() {
+        focusCheck?.cancel()
+        focusCheck = nil
+        for observer in focusObservers { NotificationCenter.default.removeObserver(observer) }
+        focusObservers.removeAll()
+        for observer in workspaceObservers { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
+        workspaceObservers.removeAll()
         if let monitor = localEventMonitor { NSEvent.removeMonitor(monitor) }
         if let monitor = outsideClickMonitor { NSEvent.removeMonitor(monitor) }
         localEventMonitor = nil

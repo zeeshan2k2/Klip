@@ -10,6 +10,11 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/zeeshan2k2/Klip/releases/latest/download/Klip.dmg"><strong>Download for macOS</strong></a><br>
+  macOS 15.4+ · Apple Silicon &amp; Intel
+</p>
+
+<p align="center">
   <a href="#features">Features</a> ·
   <a href="#installation">Installation</a> ·
   <a href="#usage">Usage</a> ·
@@ -22,7 +27,7 @@
 - **Find what you copied.** Search text, links, code, rich text, images, PDFs, files, and folders in one history.
 - **Keep the original formats.** Copy items back with their available native clipboard representations, including grouped files.
 - **A quiet confirmation.** Get a small animated copy indicator beneath the notch, or show a content preview automatically. Displays without a notch work too.
-- **Preview before pasting.** See image thumbnails, PDF previews, and native macOS file icons. Double-click an entry for a closecr look.
+- **Preview before pasting.** See image thumbnails, PDF previews, and native macOS file icons. Double-click an entry for a closer look.
 - **Stay on the keyboard.** Open history with a global shortcut, navigate results, and copy an item without reaching for the mouse.
 - **Keep recent items handy.** Reusing an entry moves it to the top without creating a duplicate.
 - **Pick up where you left off.** History is saved between launches by default, with up to 1,000 entries and configurable retention.
@@ -32,6 +37,18 @@
 Built with SwiftUI and AppKit. Requires **macOS 15.4 or later**.
 
 ## Installation
+
+### Download
+
+**[Download Klip.dmg](https://github.com/zeeshan2k2/Klip/releases/latest/download/Klip.dmg)** — universal app for Apple Silicon and Intel Macs running macOS 15.4 or later.
+
+1. Open the DMG and drag **Klip** into **Applications**.
+2. Launch Klip from Applications.
+3. Allow **Accessibility** access when prompted to paste directly into other apps.
+
+To update, quit Klip, drag the new app into Applications, and choose **Replace**. Your saved history and settings are stored separately from the app.
+
+The current download is ad-hoc signed and **not notarized by Apple**. If macOS blocks it, follow [Apple’s instructions for opening an app from an unidentified developer](https://support.apple.com/en-us/102445). Only proceed if you trust the download.
 
 ### Build from source
 

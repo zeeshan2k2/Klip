@@ -252,6 +252,39 @@ struct Phase2Checks {
         key("\u{1B}", code: 53)
         print("PASS: history above Spotlight levels; typing, ⌘2 and arrow/Enter activation, double-click preview, Escape, and retained resize")
 
+        openPanel()
+        let child = NSPanel(contentRect: NSRect(x: 100, y: 100, width: 160, height: 100),
+                            styleMask: [.titled, .nonactivatingPanel], backing: .buffered, defer: false)
+        child.level = .popUpMenu
+        panel.window!.addChildWindow(child, ordered: .above)
+        child.makeKeyAndOrderFront(nil)
+        RunLoop.main.run(until: Date().addingTimeInterval(0.1))
+        assert(panel.window!.isVisible, "A child preview/share panel must not dismiss history")
+        child.orderOut(nil)
+        panel.window!.removeChildWindow(child)
+        panel.window!.makeKey()
+        let outside = NSWindow(contentRect: NSRect(x: 100, y: 100, width: 180, height: 120),
+                               styleMask: [.titled], backing: .buffered, defer: false)
+        outside.isReleasedWhenClosed = false
+        outside.level = .popUpMenu
+        outside.collectionBehavior = [.canJoinAllSpaces, .canJoinAllApplications, .fullScreenAuxiliary]
+        outside.makeKeyAndOrderFront(nil)
+        RunLoop.main.run(until: Date().addingTimeInterval(0.15))
+        assert(!panel.window!.isVisible && !uiModel.isPanelPresented,
+               "Taking key focus outside history must close it without needing a mouse click")
+        outside.orderOut(nil)
+        openPanel()
+        NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
+        assert(!panel.window!.isVisible && !uiModel.isPanelPresented, "Changing Spaces must dismiss history")
+        openPanel()
+        if let otherApp = NSWorkspace.shared.runningApplications.first(where: { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }) {
+            NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.didActivateApplicationNotification,
+                object: nil, userInfo: [NSWorkspace.applicationUserInfoKey: otherApp])
+            assert(!panel.window!.isVisible && !uiModel.isPanelPresented, "Switching to another app must dismiss history")
+        }
+        panel.dismiss()
+        print("PASS: focus loss, external app activation, and Space changes dismiss history; child panels remain usable")
+
         for index in 0..<80 {
             uiStore.record(snapshot("Scroll regression item \(index)"))
         }
