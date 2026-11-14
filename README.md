@@ -1,30 +1,40 @@
-# Klip
+<p align="center">
+  <img src="assets/app-icon-source.png" width="128" height="128" alt="Klip app icon">
+</p>
 
-**Your clipboard, within reach.**
+<h1 align="center">Klip</h1>
 
-Klip is a native macOS clipboard manager built with SwiftUI and AppKit. Search your copy history, bring back an earlier item, and get a quiet confirmation from a compact notch popup.
+<p align="center">
+  Your clipboard, within reach.<br>
+  A native macOS clipboard manager with searchable history and subtle notch previews.
+</p>
 
-[Features](#features) · [Getting started](#getting-started) · [Usage](#usage) · [Development](#development) · [Contributing](#contributing)
+<p align="center">
+  <a href="#features">Features</a> ·
+  <a href="#installation">Installation</a> ·
+  <a href="#usage">Usage</a> ·
+  <a href="#privacy">Privacy</a> ·
+  <a href="#contributing">Contributing</a>
+</p>
 
 ## Features
 
-- **Searchable clipboard history** — find text, links, rich text, code, images, PDFs, files, and folders.
-- **Native copy-back** — preserve available clipboard formats and grouped items for pasting into compatible apps.
-- **Compact history panel** — a glass background, keyboard navigation, sharing, and a remembered window position and size.
-- **Notch previews** — click the copy indicator to see a preview, or choose to show only the preview automatically. Also works on displays without a notch.
-- **Real previews** — view copied images and image files, PDF pages, and native macOS file icons.
-- **Local persistence** — keep history between launches, with configurable item and age limits.
-- **Adjustable feedback** — choose visual feedback, sound, both, or neither. Set copy volume and preview duration separately.
-- **Privacy controls** — pause capture, exclude apps, and hide previews. Recognized sensitive clipboard markers are respected.
+- **Find what you copied.** Search text, links, code, rich text, images, PDFs, files, and folders in one history.
+- **Keep the original formats.** Copy items back with their available native clipboard representations, including grouped files.
+- **A quiet confirmation.** Get a small animated copy indicator beneath the notch, or show a content preview automatically. Displays without a notch work too.
+- **Preview before pasting.** See image thumbnails, PDF previews, and native macOS file icons. Double-click an entry for a closer look.
+- **Stay on the keyboard.** Open history with a global shortcut, navigate results, and copy an item without reaching for the mouse.
+- **Pick up where you left off.** History is saved between launches by default, with up to 1,000 entries and configurable retention.
+- **Make it yours.** Adjust sounds, volume, preview duration, appearance, and the global shortcut. Resize and move the history panel; Klip remembers it.
+- **Control what gets captured.** Pause monitoring, exclude apps, hide previews, or turn off saved history.
 
-## Getting started
+Built with SwiftUI and AppKit. Requires **macOS 15.4 or later**.
 
-### Requirements
+## Installation
 
-- macOS **15.4 or later**.
-- **Xcode 27 or later**, with the macOS SDK. Development has been verified with Xcode 27.1.
+### Build from source
 
-### Build with Xcode
+You’ll need **Xcode 27 or later**. Development has been verified with Xcode 27.1.
 
 ```sh
 git clone https://github.com/zeeshan2k2/Klip.git
@@ -33,95 +43,76 @@ open Klip.xcodeproj
 ```
 
 1. Select the **Klip** scheme and **My Mac** destination.
-2. Choose your own development team under **Signing & Capabilities** if prompted.
+2. Select your development team under **Signing & Capabilities**, if prompted.
 3. Press **⌘R** to build and run.
 
-### Build from Terminal
-
-For a local unsigned development build:
-
-```sh
-xcodebuild \
-  -project Klip.xcodeproj \
-  -scheme Klip \
-  -configuration Debug \
-  -derivedDataPath /tmp/klip-build \
-  CODE_SIGNING_ALLOWED=NO \
-  build
-
-open /tmp/klip-build/Build/Products/Debug/Klip.app
-```
-
-Launch at login requires an installed, signed build. Its status and any registration errors appear in Settings.
+Launch at login requires an installed, signed build. Registration status appears in Settings.
 
 ## Usage
 
-Copy something as usual, then press **⌘⇧V** to open your history. You can also open it from the menu bar or Dock.
+Copy something as usual, then press **⌘⇧V** or choose **Show Clipboard** from the menu bar. Search for an entry, select it, and press **Return** to copy it back. Paste into your destination app with **⌘V**.
 
-| Action | Control |
+| Action | Shortcut or control |
 | --- | --- |
-| Open history | **⌘⇧V** |
-| Move through results | **↑ / ↓** |
-| Copy the selected item | **Return** |
-| Copy one of the first nine results | **⌘1–9** |
+| Open clipboard history | ⌘⇧V, configurable in Settings |
+| Move through results | ↑ / ↓ |
+| Copy the selected item | Return |
+| Copy one of the first nine results | ⌘1–9 |
 | Inspect an item | Double-click its row |
-| Share an item | Share button on the row |
-| Delete an item | Right-click → **Delete**, or use the inspector |
-| Close the panel | **Escape** or click outside |
-| Open Settings | Gear button, or **⌘,** while history has focus |
+| Share an item | Row’s share button |
+| Delete an item | Right-click → Delete, or use the inspector |
+| Close history | Escape or click outside |
+| Open Settings | Gear button, or ⌘, while history has focus |
 
-Selecting an item copies it back to the clipboard. Use **⌘V** in the destination app to paste it.
+Click the notch indicator to preview your latest copy. Prefer seeing the content immediately? Enable automatic previews in Settings. Klip then shows the preview directly, without the copy indicator first.
 
-Click the notch indicator to preview the latest copy. The preview stays centered beneath the notch, fits short content horizontally, and uses the notch width as its maximum. Photos retain their proportions and have 10-point padding on all sides.
-
-### Preferences
-
-Open the gear button to configure **History**, **Privacy**, **Feedback**, and **General** settings.
+### Defaults
 
 | Setting | Default |
 | --- | --- |
 | Save history between launches | On |
-| Maximum history items | 1,000 |
+| History limit | 1,000 items |
 | Retention | 7 days |
 | Copy feedback | Visual only |
-| Show expanded preview automatically | Off |
-| Expanded preview duration | **1.0 second**, adjustable from 1–30 seconds |
-| Copy sound volume | **50%** |
+| Automatic content previews | Off |
+| Content preview duration | 1 second; adjustable from 1–30 seconds |
+| Copy sound volume | 50% |
 | Delete sound | On |
 
-The global shortcut, appearance, copy-indicator duration, excluded apps, and launch-at-login preference are configurable too. Saved choices remain in place after restarting.
+## Privacy
 
-## Privacy and storage
+Your history stays on your Mac. Klip saves captured clipboard data in a local archive; no account or cloud service is required.
 
-History is saved locally on your Mac as a JSON archive containing the captured clipboard representations. No account or cloud service is required.
+- Pause monitoring at any time from the menu bar.
+- Exclude apps from capture. Common password managers and Keychain Access are excluded by default, and recognized sensitive clipboard markers are respected.
+- Turn off **Save history between launches** to remove the saved archive and keep history only until you quit.
+- Use **Clear History** to remove current and saved entries.
 
-- Turn off **Save history between launches** to delete the saved archive and keep only the current in-memory list until quitting.
-- **Clear History** removes both current and saved entries.
-- Paused monitoring and excluded apps suppress capture.
-- Hidden previews conceal content in the interface; capture and storage still follow your history settings.
+Hiding previews conceals content in the interface; it does not stop capture or storage.
 
-Copied files are stored as references, with bookmarks where available, rather than as duplicate file contents. Deleted or unavailable source files can make an entry unavailable. Some app-specific or promised formats require the originating app to remain usable; Klip reports incomplete captures.
+## FAQ
+
+### Does selecting an item paste it automatically?
+
+Selecting an item and pressing Return copies it back to your clipboard. Switch to the destination app and press **⌘V** to paste.
+
+### Does Klip work without a notch?
+
+Yes. Copy feedback appears at the top of the display.
+
+### Are copied files backed up?
+
+No. File entries keep references and bookmarks where available, rather than duplicating the files. Moving or deleting the originals can make them unavailable.
+
+### Does every app-specific clipboard format work?
+
+Klip preserves available native representations, but some app-specific or promised formats depend on the originating app. Incomplete captures are reported, and restoring a format depends on support in the destination app.
 
 ## Development
 
-The project uses native macOS frameworks and has no third-party package dependencies.
+Klip uses native macOS frameworks and has no third-party package dependencies.
 
-```text
-Klip/
-├── App/          App lifecycle and coordination
-├── Clipboard/    Capture, classification, and native copy-back
-├── History/      History model, persistence, panel, and previews
-├── MenuBar/      Menu bar controls and global shortcut
-├── Popup/        Notch presentation and audio feedback
-├── Privacy/      Capture rules and app exclusions
-└── Settings/     Preferences and launch-at-login integration
-Tests/            Standalone verification programs
-scripts/          Verification entry points
-```
-
-### Run checks
-
-From the repository root, with Xcode selected as the active developer directory:
+Run the existing checks from the repository root with Xcode selected as your active developer directory:
 
 ```sh
 ./scripts/check-phase2.sh
@@ -131,18 +122,18 @@ From the repository root, with Xcode selected as the active developer directory:
 ./scripts/check-interactions.sh
 ```
 
-The checks cover clipboard round trips, privacy rules, persistence, keyboard interactions, notch geometry, preview timers, and audio behavior. They use private pasteboards, temporary archives, isolated preferences, and silent audio checks. UI checks may open temporary windows; run the scripts sequentially.
+Run these sequentially. They cover clipboard round trips, privacy rules, persistence, keyboard interactions, preview timing, and audio behavior using private pasteboards, temporary archives, and isolated preferences. Some checks open temporary windows.
 
-Physical notch behavior, fullscreen Spaces, multi-display layouts, and perceived sound levels also benefit from manual testing.
+Physical notch animations, fullscreen Spaces, multiple displays, and sound levels should also be checked manually.
 
 ## Contributing
 
-Bug reports and focused pull requests are welcome.
+[Bug reports](https://github.com/zeeshan2k2/Klip/issues) and focused pull requests are welcome.
 
-For a bug report, include your macOS and Xcode versions, steps to reproduce, and the expected and actual behavior. Use sample clipboard content when sharing a reproduction.
+For bugs, include your macOS version, steps to reproduce, and what you expected to happen. Use sample clipboard content rather than personal data.
 
-For code changes, explain the behavior being changed, run the relevant checks, and include before-and-after screenshots or a recording for interface changes.
+For changes, describe the resulting behavior and run the relevant checks. Include screenshots or a short recording for UI changes.
 
 ## License
 
-A license file has not yet been added to this repository.
+A license has not yet been added to this repository.
