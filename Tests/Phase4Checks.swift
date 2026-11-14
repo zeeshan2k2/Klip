@@ -70,7 +70,7 @@ struct Phase4Checks {
         let preferences = PreferencesStore(defaults: defaults)
         try check(preferences.saveHistory && preferences.historyLimit == 1000 && preferences.retentionDays == 7)
         try check(preferences.feedbackMode == .visual && preferences.historyShortcut == .commandShiftV)
-        try check(preferences.expandedPreviewDuration == 4)
+        try check(preferences.expandedPreviewDuration == 1.0)
         try check(!preferences.autoExpandCopyPreview)
         preferences.autoExpandCopyPreview = true
         preferences.saveHistory = false
@@ -98,7 +98,7 @@ struct Phase4Checks {
         preferences.expandedPreviewDuration = -1
         try check(preferences.expandedPreviewDuration == 1)
         preferences.expandedPreviewDuration = .nan
-        try check(preferences.expandedPreviewDuration == 4)
+        try check(preferences.expandedPreviewDuration == 1.0)
         preferences.historyLimit = 1001
         try check(preferences.historyLimit == 1000)
         preferences.historyLimit = -1

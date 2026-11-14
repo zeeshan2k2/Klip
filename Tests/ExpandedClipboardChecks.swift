@@ -100,6 +100,12 @@ struct ExpandedClipboardChecks {
                "An unreadable first image format must fall back to the valid alternative")
         roundTrip(image)
         assert((board.readObjects(forClasses: [NSImage.self], options: nil) as? [NSImage])?.first != nil)
+        let portraitContext = CGContext(data: nil, width: 32, height: 64, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        portraitContext.setFillColor(CGColor(red: 0, green: 1, blue: 0, alpha: 1))
+        portraitContext.fill(CGRect(x: 0, y: 0, width: 32, height: 64))
+        let portraitPNG = NSBitmapImageRep(cgImage: portraitContext.makeImage()!).representation(using: .png, properties: [:])!
+        let portraitImage = capture([native([(.png, portraitPNG)])])
         let pdfBytes = NSMutableData()
         var pageRect = CGRect(x: 0, y: 0, width: 300, height: 200)
         let pdfContext = CGContext(consumer: CGDataConsumer(data: pdfBytes)!, mediaBox: &pageRect, nil)!
@@ -220,7 +226,7 @@ struct ExpandedClipboardChecks {
         print("PASS: native multi-file/folder copies, Xcode project references, bookmarks, moved/missing files, and legacy file lists")
 
         let archive = JSONHistoryPersistence(fileURL: directory.appendingPathComponent("saved/History.json"))
-        let saved = [finderImage, image, legacyFiles, code, rich, html, richPackage, pdf, generic, multiple, binaryGroups].map { HistoryItem(snapshot: $0) }
+        let saved = [portraitImage, finderImage, image, legacyFiles, code, rich, html, richPackage, pdf, generic, multiple, binaryGroups].map { HistoryItem(snapshot: $0) }
         try archive.save(saved)
         let loaded = try archive.load()
         assert(loaded.map(\.id) == saved.map(\.id))
@@ -278,6 +284,25 @@ struct ExpandedClipboardChecks {
         let rendered = hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds)!
         hosting.cacheDisplay(in: hosting.bounds, to: rendered)
         try rendered.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: "/tmp/klip-expanded-history.png"))
+        var portraitLeft = rendered.pixelsWide
+        var landscapeLeft = rendered.pixelsWide
+        for y in 0..<rendered.pixelsHigh {
+            for x in 0..<rendered.pixelsWide {
+                let color = rendered.colorAt(x: x, y: y)!.usingColorSpace(.deviceRGB)!
+                if color.greenComponent > color.redComponent + 0.25 && color.greenComponent > color.blueComponent + 0.25 {
+                    portraitLeft = min(portraitLeft, x)
+                }
+                if color.redComponent > color.greenComponent + 0.25 && color.redComponent > color.blueComponent + 0.25 {
+                    landscapeLeft = min(landscapeLeft, x)
+                }
+            }
+        }
+        let renderingScale = CGFloat(rendered.pixelsWide) / hosting.bounds.width
+        assert(abs(CGFloat(portraitLeft) / renderingScale - 11) <= 1,
+               "Portrait images must start at the row's left content margin, without centering inset: \(portraitLeft), scale \(renderingScale)")
+        assert(abs(portraitLeft - landscapeLeft) <= 1,
+               "Portrait and landscape image pixels must share the same leading edge")
+        print("PASS: rendered portrait and landscape thumbnails share the row's left margin and a fixed 40-point label column")
         panel.dismiss()
         panel.window?.setFrameAutosaveName("")
         UserDefaults.standard.removeObject(forKey: "NSWindow Frame \(frameName)")

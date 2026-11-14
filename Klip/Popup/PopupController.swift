@@ -37,7 +37,7 @@ final class PopupController: CopyPopupPresenting {
          reduceMotion: (() -> Bool)? = nil,
          durationProvider: (() -> TimeInterval)? = nil,
          autoExpandProvider: @escaping () -> Bool = { false },
-         previewDurationProvider: @escaping () -> TimeInterval = { 4 }) {
+         previewDurationProvider: @escaping () -> TimeInterval = { 1.0 }) {
         self.displays = displays ?? { PopupDisplay.current() }
         self.pointer = pointer ?? { NSEvent.mouseLocation }
         self.reduceMotion = reduceMotion ?? { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
@@ -92,28 +92,34 @@ final class PopupController: CopyPopupPresenting {
         targetDisplayID = display.id
         state.reduceMotion = reduceMotion()
         state.presentationCount += 1
-        let target = PopupPlacement.frame(on: display)
+        let automaticPreview = autoExpandProvider()
         let alreadyVisible = state.isVisible && panel.isVisible
         state.isVisible = true
-        state.showsPreview = false
-        state.canvasWidth = target.width
-        state.canvasHeight = target.height
-        state.width = target.width
-        panel.setFrame(target, display: true)
-        panel.alphaValue = 1
         if !alreadyVisible { state.isExpanded = false }
+        if automaticPreview {
+            // Configure the preview before ordering the window onscreen. No
+            // compact copy-indicator state is ever presented in this mode.
+            preparePreview(on: display, animated: false)
+        } else {
+            let target = PopupPlacement.frame(on: display)
+            state.showsPreview = false
+            state.canvasWidth = target.width
+            state.canvasHeight = target.height
+            state.width = target.width
+            panel.setFrame(target, display: true)
+        }
+        panel.alphaValue = 1
         panel.orderFrontRegardless()
         panel.contentView?.layoutSubtreeIfNeeded()
-        scheduleDismissal(after: max(0.01, durationProvider?() ?? visibleDuration), generation: current)
+        let duration = automaticPreview ? previewDurationProvider() : (durationProvider?() ?? visibleDuration)
+        scheduleDismissal(after: max(0.01, duration), generation: current)
         if state.reduceMotion || alreadyVisible {
             state.isExpanded = true
-            if autoExpandProvider() { expandPreview() }
         } else {
             Task { @MainActor [weak self] in
                 await Task.yield()
                 guard let self, self.generation == current, self.state.isVisible else { return }
                 self.state.isExpanded = true
-                if self.autoExpandProvider() { self.expandPreview() }
             }
         }
     }
@@ -125,25 +131,38 @@ final class PopupController: CopyPopupPresenting {
         generation += 1
         dismissalTask?.cancel()
         if !state.showsPreview {
-            if let snapshot = previewSnapshot, snapshot.kind == .image || snapshot.kind == .document || snapshot.kind == .files {
-                state.previewImage = ClipboardMedia.image(for: snapshot, maximumPixels: 400)
-            }
-            previewSnapshot = nil
             guard let display = displays().first(where: { $0.id == targetDisplayID }) else { dismiss(); return }
-            let maximumWidth = PopupPlacement.previewFrame(on: display).width
-            let width = PopupLayout.previewWidth(for: state, maximum: maximumWidth)
-            let height = PopupLayout.previewSize.height
-            let target = PopupPlacement.previewFrame(on: display, height: height, preferredWidth: width)
-            state.canvasWidth = width
-            state.canvasHeight = height
-            panel.setFrame(target, display: true)
-            panel.contentView?.layoutSubtreeIfNeeded()
+            preparePreview(on: display, animated: true)
+        }
+        scheduleDismissal(after: max(0.01, previewDurationProvider()), generation: generation)
+    }
+
+    private func preparePreview(on display: PopupDisplay, animated: Bool) {
+        if let snapshot = previewSnapshot, snapshot.kind == .image || snapshot.kind == .document || snapshot.kind == .files {
+            state.previewImage = ClipboardMedia.image(for: snapshot, maximumPixels: 400)
+        }
+        previewSnapshot = nil
+        let maximumWidth = PopupPlacement.previewFrame(on: display).width
+        let width = PopupLayout.previewWidth(for: state, maximum: maximumWidth)
+        let height = PopupLayout.previewSize.height
+        let target = PopupPlacement.previewFrame(on: display, height: height, preferredWidth: width)
+        state.canvasWidth = width
+        state.canvasHeight = height
+        panel.setFrame(target, display: true)
+        panel.contentView?.layoutSubtreeIfNeeded()
+        if animated {
             withAnimation(state.reduceMotion ? nil : .spring(response: 0.38, dampingFraction: 1)) {
                 state.width = width
                 state.showsPreview = true
             }
+        } else {
+            var transaction = Transaction(animation: nil)
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                state.width = width
+                state.showsPreview = true
+            }
         }
-        scheduleDismissal(after: max(0.01, previewDurationProvider()), generation: generation)
     }
 
     private func scheduleDismissal(after duration: TimeInterval, generation current: Int) {

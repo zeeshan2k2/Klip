@@ -9,6 +9,26 @@ struct Phase2Checks {
     @MainActor
     static func main() {
         setbuf(stdout, nil)
+        let statusIcon = MenuBarController.makeStatusIcon()
+        assert(statusIcon.size == NSSize(width: 18, height: 18) && statusIcon.isTemplate)
+        assert(statusIcon.accessibilityDescription == "Klip clipboard")
+        let bitmap = NSBitmapImageRep(data: statusIcon.tiffRepresentation!)!
+        var ink = 0
+        for y in 0..<bitmap.pixelsHigh {
+            for x in 0..<bitmap.pixelsWide {
+                let color = bitmap.colorAt(x: x, y: y)!.usingColorSpace(.deviceRGB)!
+                if color.alphaComponent > 0.1 {
+                    ink += 1
+                    assert(abs(color.redComponent - color.greenComponent) < 0.01
+                           && abs(color.greenComponent - color.blueComponent) < 0.01)
+                }
+            }
+        }
+        assert(ink > 0 && ink < bitmap.pixelsWide * bitmap.pixelsHigh / 2,
+               "The menu-bar icon must contain only the paperclip silhouette, not the app-icon tile")
+        assert(bitmap.colorAt(x: 0, y: 0)!.alphaComponent == 0)
+        try! bitmap.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: "/tmp/klip-menu-template.png"))
+        print("PASS: monochrome 18-point vector paperclip template, transparent background, and native menu-bar tinting")
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
         let pasteboard = NSPasteboard.withUniqueName()

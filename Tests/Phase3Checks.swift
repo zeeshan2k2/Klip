@@ -246,15 +246,21 @@ struct Phase3Checks {
             autoExpandProvider: { autoExpand })
         automatic.setPreview(sample)
         automatic.showCopied()
+        assert(automatic.state.showsPreview && automatic.panel.frame.height == PopupLayout.previewSize.height,
+               "Automatic mode must present the preview immediately, without a compact icon phase")
         RunLoop.main.run(until: Date().addingTimeInterval(0.05))
         assert(automatic.state.showsPreview && automatic.panel.frame.width == display1.notchWidth)
         assert(automatic.state.previewText == sample.content)
+        automatic.setPreview(sample)
+        automatic.showCopied()
+        assert(automatic.state.showsPreview && automatic.panel.frame.height == PopupLayout.previewSize.height,
+               "A successive copy in automatic mode must never reset to the copy icon")
         autoExpand = false
         automatic.setPreview(sample)
         automatic.showCopied()
         assert(!automatic.state.showsPreview && automatic.panel.frame.width == PopupLayout.size.width)
         automatic.stop()
-        print("PASS: automatic preview opens on capture at measured notch width, and disabling restores click-to-preview")
+        print("PASS: automatic mode opens preview directly with no compact-icon phase, including successive copies; disabling restores click-to-preview")
 
 
         var previewDuration: TimeInterval = 0.25

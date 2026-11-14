@@ -111,7 +111,7 @@ final class PreferencesStore {
     var expandedPreviewDuration: Double {
         didSet {
             if !expandedPreviewDuration.isFinite || !(1...30).contains(expandedPreviewDuration) {
-                expandedPreviewDuration = expandedPreviewDuration.isFinite ? min(30, max(1, expandedPreviewDuration)) : 4
+                expandedPreviewDuration = expandedPreviewDuration.isFinite ? min(30, max(1, expandedPreviewDuration)) : 1.0
             }
             defaults.set(expandedPreviewDuration, forKey: "Klip.expandedPreviewDuration")
             onSettingsChanged?()
@@ -166,8 +166,8 @@ final class PreferencesStore {
         retentionDays = defaults.object(forKey: "Klip.retentionDays") == nil ? 7 : min(365, max(0, defaults.integer(forKey: "Klip.retentionDays")))
         monitoringPaused = defaults.bool(forKey: "Klip.monitoringPaused")
         hidePreviews = defaults.bool(forKey: "Klip.hidePreviews")
-        let previewDuration = defaults.object(forKey: "Klip.expandedPreviewDuration") == nil ? 4 : defaults.double(forKey: "Klip.expandedPreviewDuration")
-        expandedPreviewDuration = previewDuration.isFinite ? min(30, max(1, previewDuration)) : 4
+        let previewDuration = defaults.object(forKey: "Klip.expandedPreviewDuration") == nil ? 1.0 : defaults.double(forKey: "Klip.expandedPreviewDuration")
+        expandedPreviewDuration = previewDuration.isFinite ? min(30, max(1, previewDuration)) : 1.0
         let duration = defaults.object(forKey: "Klip.popupDuration") == nil ? 1.15 : defaults.double(forKey: "Klip.popupDuration")
         popupDuration = duration.isFinite ? min(3, max(0.5, duration)) : 1.15
         excludedApplicationIDs = defaults.stringArray(forKey: "Klip.excludedApplicationIDs") ?? [

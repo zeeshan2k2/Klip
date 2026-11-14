@@ -74,12 +74,26 @@ enum ClipboardMedia {
 struct HistoryThumbnail: View {
     let item: HistoryItem
     @State private var image: NSImage?
+
+    private var fittedSize: NSSize {
+        guard let image, image.size.width > 0, image.size.height > 0 else { return NSSize(width: 40, height: 44) }
+        let scale = min(40 / image.size.width, 44 / image.size.height)
+        return NSSize(width: image.size.width * scale, height: image.size.height * scale)
+    }
+
     var body: some View {
         Group {
-            if let image { Image(nsImage: image).resizable().renderingMode(.original).interpolation(.high).scaledToFit() }
-            else { Image(systemName: item.kind.symbol).font(.system(size: 24)).foregroundStyle(.secondary) }
+            if let image {
+                Image(nsImage: image)
+                    .resizable()
+                    .renderingMode(.original)
+                    .interpolation(.high)
+                    .frame(width: fittedSize.width, height: fittedSize.height)
+            } else {
+                Image(systemName: item.kind.symbol).font(.system(size: 24)).foregroundStyle(.secondary)
+            }
         }
-        .frame(width: ClipboardMedia.isImageContent(item.snapshot) ? 68 : 40, height: 44)
+        .frame(width: 40, height: 44, alignment: .leading)
         .accessibilityHidden(true)
         .task(id: item.id) { image = ClipboardMedia.image(for: item.snapshot, maximumPixels: 160) }
     }

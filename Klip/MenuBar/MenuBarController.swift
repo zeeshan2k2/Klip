@@ -8,11 +8,13 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     private let onPause: () -> Void
     private let statusItem: NSStatusItem
     private let menu = NSMenu()
+    private let statusIcon: NSImage
 
     init(model: HistoryViewModel, onShow: @escaping () -> Void, onPause: @escaping () -> Void) {
         self.model = model
         self.onShow = onShow
         self.onPause = onPause
+        statusIcon = Self.makeStatusIcon()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         super.init()
         menu.delegate = self
@@ -21,9 +23,48 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         refreshIcon()
     }
 
+    /// A vector silhouette of the brand mark, tinted by macOS for the menu bar.
+    static func makeStatusIcon() -> NSImage {
+        let image = NSImage(size: NSSize(width: 18, height: 18), flipped: true) { _ in
+            // Broad, chamfered paperclip with an inner return, matching the app artwork.
+            let mark = NSBezierPath()
+            mark.windingRule = .evenOdd
+            func polygon(_ points: [NSPoint]) {
+                mark.move(to: points[0])
+                for point in points.dropFirst() { mark.line(to: point) }
+                mark.close()
+            }
+            polygon([
+                NSPoint(x: -1.7, y: -7.5), NSPoint(x: 1.7, y: -7.5),
+                NSPoint(x: 3.2, y: -6), NSPoint(x: 3.2, y: 6),
+                NSPoint(x: 1.7, y: 7.5), NSPoint(x: -1.7, y: 7.5),
+                NSPoint(x: -3.2, y: 6), NSPoint(x: -3.2, y: -6)
+            ])
+            polygon([
+                NSPoint(x: -1, y: -5.8), NSPoint(x: 1, y: -5.8),
+                NSPoint(x: 1.7, y: -5.1), NSPoint(x: 1.7, y: 5.1),
+                NSPoint(x: 1, y: 5.8), NSPoint(x: -1, y: 5.8),
+                NSPoint(x: -1.7, y: 5.1), NSPoint(x: -1.7, y: -5.1)
+            ])
+            let tongue = NSBezierPath(roundedRect: NSRect(x: -0.65, y: -1.8, width: 1.3, height: 8.3),
+                                      xRadius: 0.5, yRadius: 0.5)
+            var transform = AffineTransform(translationByX: 9, byY: 9)
+            transform.rotate(byDegrees: 36)
+            mark.transform(using: transform)
+            tongue.transform(using: transform)
+            NSColor.black.setFill()
+            mark.fill()
+            tongue.fill()
+            return true
+        }
+        image.isTemplate = true
+        image.accessibilityDescription = "Klip clipboard"
+        return image
+    }
+
     func refreshIcon() {
-        let symbol = model.privacy.isPaused ? "pause.rectangle" : "doc.on.clipboard"
-        statusItem.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Klip clipboard")
+        statusItem.button?.image = statusIcon
+        statusItem.button?.appearsDisabled = model.privacy.isPaused
         statusItem.button?.toolTip = model.privacy.isPaused ? "Klip — monitoring paused" : "Klip — clipboard history"
     }
 
