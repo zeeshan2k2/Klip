@@ -64,6 +64,20 @@ final class ClipboardHistoryStore {
         return true
     }
 
+    /// Reusing a clipping refreshes it in place rather than creating a duplicate.
+    @discardableResult
+    func promote(_ item: HistoryItem, changeCount: Int) -> Bool {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return false }
+        let original = items.remove(at: index)
+        let snapshot = ClipboardSnapshot(content: original.content, kind: original.kind,
+            changeCount: changeCount, capturedAt: now(), sourceApplicationID: original.snapshot.sourceApplicationID,
+            items: original.snapshot.items, unavailableTypes: original.snapshot.unavailableTypes)
+        items.insert(HistoryItem(id: original.id, snapshot: snapshot), at: 0)
+        trim()
+        save()
+        return true
+    }
+
     func remove(_ item: HistoryItem) {
         items.removeAll { $0.id == item.id }
         save()

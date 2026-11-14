@@ -24,6 +24,7 @@
 - **A quiet confirmation.** Get a small animated copy indicator beneath the notch, or show a content preview automatically. Displays without a notch work too.
 - **Preview before pasting.** See image thumbnails, PDF previews, and native macOS file icons. Double-click an entry for a closecr look.
 - **Stay on the keyboard.** Open history with a global shortcut, navigate results, and copy an item without reaching for the mouse.
+- **Keep recent items handy.** Reusing an entry moves it to the top without creating a duplicate.
 - **Pick up where you left off.** History is saved between launches by default, with up to 1,000 entries and configurable retention.
 - **Make it yours.** Adjust sounds, volume, preview duration, appearance, and the global shortcut. Resize and move the history panel; Klip remembers it.
 - **Control what gets captured.** Pause monitoring, exclude apps, hide previews, or turn off saved history.
@@ -50,14 +51,14 @@ Launch at login requires an installed, signed build. Registration status appears
 
 ## Usage
 
-Copy something as usual, then press **⌘⇧V** or choose **Show Clipboard** from the menu bar. Search for an entry, select it, and press **Return** to copy it back. Paste into your destination app with **⌘V**.
+Copy something as usual, then press **⌘⇧V** or choose **Show Clipboard** from the menu bar. Search for an entry, select it, and press **Return** to paste it into the app you were using. On first use, allow Klip in **System Settings → Privacy & Security → Accessibility**. Until permission is granted, the item is copied and you can paste it manually with **⌘V**.
 
 | Action | Shortcut or control |
 | --- | --- |
 | Open clipboard history | ⌘⇧V, configurable in Settings |
 | Move through results | ↑ / ↓ |
-| Copy the selected item | Return |
-| Copy one of the first nine results | ⌘1–9 |
+| Paste the selected item into the previous app | Return |
+| Paste one of the first nine results | ⌘1–9 |
 | Inspect an item | Double-click its row |
 | Share an item | Row’s share button |
 | Delete an item | Right-click → Delete, or use the inspector |
@@ -96,7 +97,7 @@ Hiding previews conceals content in the interface; it does not stop capture or s
 
 ### Does selecting an item paste it automatically?
 
-Selecting an item and pressing Return copies it back to your clipboard. Switch to the destination app and press **⌘V** to paste.
+Yes. Press Return or ⌘1–9 to paste into the previous app, after granting Accessibility permission. Explicit **Copy** actions in the context menu or inspector only copy the item to the clipboard.
 
 ### Does Klip work without a notch?
 

@@ -51,7 +51,7 @@ final class KlipAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        coordinator.showHistory()
+        coordinator.reopen()
         return true
     }
 }

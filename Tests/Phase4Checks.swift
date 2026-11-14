@@ -109,6 +109,27 @@ struct Phase4Checks {
         try check(preferences.historyLimit == 1 && preferences.retentionDays == 0 && preferences.popupDuration == 1.0)
         print("PASS: first-launch saving and explicit opt-out, saved settings, and invalid preference bounds")
 
+        let promotionArchive = JSONHistoryPersistence(fileURL: directory.appendingPathComponent("promoted/History.json"))
+        var promotionTime = Date(timeIntervalSince1970: 1_800_000_000)
+        let promotionStore = ClipboardHistoryStore(persistence: promotionArchive, persistenceEnabled: true,
+            now: { promotionTime })
+        for text in ["older", "middle", "newest"] {
+            promotionStore.record(ClipboardSnapshot(content: text, kind: .text, changeCount: 1,
+                capturedAt: promotionTime, sourceApplicationID: "test.original"))
+        }
+        let reused = promotionStore.items[2]
+        promotionTime = promotionTime.addingTimeInterval(60)
+        try check(promotionStore.promote(reused, changeCount: 42))
+        try check(promotionStore.items.map(\.content) == ["older", "newest", "middle"])
+        try check(promotionStore.items[0].id == reused.id && promotionStore.items.count == 3)
+        try check(promotionStore.items[0].snapshot.capturedAt == promotionTime && promotionStore.items[0].snapshot.changeCount == 42)
+        try check(promotionStore.items[0].snapshot.items == reused.snapshot.items)
+        try check(promotionStore.promote(promotionStore.items[0], changeCount: 43) && promotionStore.items.count == 3)
+        let promotedReload = ClipboardHistoryStore(persistence: promotionArchive, persistenceEnabled: true)
+        try check(promotedReload.items.map(\.id) == promotionStore.items.map(\.id))
+        try check(promotedReload.items[0].snapshot.capturedAt == promotionTime)
+        print("PASS: reused clippings move to the top with stable identity, no duplicates, refreshed time, and durable order")
+
         // Launch two separate executables to verify save/restore across process exit.
         for mode in ["--write", "--verify"] {
             let child = Process()
@@ -285,13 +306,27 @@ struct Phase4Checks {
         renderPreferences.retentionDays = 7
         renderPreferences.hidePreviews = true
         let renderModel = HistoryViewModel(store: ClipboardHistoryStore(items: HistoryItem.examples), preferences: renderPreferences)
-        let settings = SettingsController(model: renderModel, login: login)
+        var settingsActivationRequests = 0
+        let settings = SettingsController(model: renderModel, login: login,
+            activateApplication: { settingsActivationRequests += 1 })
         let settingsWindow = settings.window!
         try check(settingsWindow.level == .normal && !settingsWindow.styleMask.contains(.nonactivatingPanel))
         try check(settingsWindow.collectionBehavior.contains([.managed, .fullScreenNone, .fullScreenDisallowsTiling]))
         try check(settingsWindow.collectionBehavior.intersection([.canJoinAllSpaces, .canJoinAllApplications, .fullScreenAuxiliary, .moveToActiveSpace]).isEmpty,
                   "Settings must stay on desktop Spaces rather than join fullscreen apps")
-        print("PASS: Settings uses a normal desktop window without fullscreen overlay behavior")
+        try check(settingsWindow.collectionBehavior.contains(.primary))
+        settings.showWindow(nil)
+        RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+        try check(settingsWindow.isVisible && settingsWindow.canBecomeMain && settingsWindow.canBecomeKey
+                  && settingsActivationRequests == 1,
+                  "Opening Settings must request application activation for a focusable desktop window")
+        settingsWindow.orderOut(nil)
+        settings.showWindow(nil)
+        RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+        try check(settings.window === settingsWindow && settingsWindow.isVisible && settingsActivationRequests == 2,
+                  "Reopening must reuse Settings and request activation again")
+        settingsWindow.orderOut(nil)
+        print("PASS: primary desktop Settings window requests activation on each opening and reuses its window")
         for (name, tab) in [("history", SettingsTab.history), ("privacy", .privacy), ("feedback", .feedback), ("general", .general)] {
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 560), styleMask: [.borderless], backing: .buffered, defer: false)
             let hosting = NSHostingView(rootView: SettingsView(preferences: renderPreferences, model: renderModel, login: login, onAddExclusion: {}, selectedTab: tab))

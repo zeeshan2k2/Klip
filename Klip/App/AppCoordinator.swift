@@ -4,6 +4,7 @@ import AppKit
 final class AppCoordinator {
     let history: ClipboardHistoryStore
     let model: HistoryViewModel
+    private let paster = ClipboardPaster()
     private let writer: ClipboardWriter
     private let monitor: ClipboardMonitor
     private let historyPanel: HistoryPanelController
@@ -41,6 +42,7 @@ final class AppCoordinator {
             model.historyDidChange()
         }
         model.monitor = monitor
+        model.onPaste = { [weak self] item in self?.paste(item) }
         model.onCopy = { [weak self] item in self?.copy(item) }
         model.onTogglePause = { [weak self] in self?.toggleMonitoring() }
         model.onShowSettings = { [weak self] in self?.showSettings() }
@@ -64,6 +66,7 @@ final class AppCoordinator {
     }
 
     func stop() {
+        paster.cancel()
         monitor.stop()
         history.maintenance()
         history.stopMaintenance()
@@ -73,6 +76,7 @@ final class AppCoordinator {
     }
 
     func showHistory() {
+        if !model.isPanelPresented { paster.captureDestination() }
         history.maintenance()
         model.historyDidChange()
         model.query = ""
@@ -82,7 +86,19 @@ final class AppCoordinator {
         historyPanel.window?.makeKeyAndOrderFront(nil)
     }
 
+    func reopen() {
+        if let settingsPanel, let window = settingsPanel.window,
+           window.isVisible || window.isMiniaturized {
+            paster.cancel()
+            historyPanel.dismiss()
+            settingsPanel.focusWindow()
+        } else {
+            showHistory()
+        }
+    }
+
     func showSettings() {
+        paster.cancel()
         historyPanel.dismiss()
         if settingsPanel == nil { settingsPanel = SettingsController(model: model, login: login) }
         settingsPanel?.showWindow(nil)
@@ -111,8 +127,31 @@ final class AppCoordinator {
         model.preferences.monitoringPaused.toggle()
     }
 
+    private func paste(_ item: HistoryItem) {
+        guard writer.write(item.snapshot) else {
+            model.copyError = writer.lastError ?? "Couldn’t copy this item. Please try again."
+            return
+        }
+        history.promote(item, changeCount: writer.lastWrittenChangeCount!)
+        model.historyDidChange()
+        if let error = paster.preparationError() {
+            model.copyError = error
+            return
+        }
+        model.copyError = nil
+        historyPanel.dismiss()
+        paster.paste(changeCount: writer.lastWrittenChangeCount!) { [weak self] error in
+            guard let self else { return }
+            self.model.copyError = error
+            self.historyPanel.showWindow(nil)
+        }
+    }
+
     private func copy(_ item: HistoryItem) {
+        paster.cancel()
         if writer.write(item.snapshot) {
+            history.promote(item, changeCount: writer.lastWrittenChangeCount!)
+            model.historyDidChange()
             model.copyError = nil
             historyPanel.dismiss()
         } else {

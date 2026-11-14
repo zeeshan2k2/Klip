@@ -11,6 +11,7 @@ final class HistoryViewModel {
     let privacy: PrivacyPolicy
     let preferences: PreferencesStore
     var monitor: ClipboardMonitor?
+    @ObservationIgnored var onPaste: ((HistoryItem) -> Void)?
     @ObservationIgnored var onCopy: ((HistoryItem) -> Void)?
     @ObservationIgnored var onTogglePause: (() -> Void)?
     @ObservationIgnored var onShowSettings: (() -> Void)?
@@ -20,6 +21,7 @@ final class HistoryViewModel {
     var query = "" { didSet { reconcileSelection() } }
     var selectedID: HistoryItem.ID?
     var isPanelPresented = false
+    var presentationCount: UInt = 0
     var inspectedItem: HistoryItem?
     var appearance: Appearance {
         get { preferences.appearance }
@@ -57,6 +59,11 @@ final class HistoryViewModel {
     }
 
     func inspectSelection() { inspectedItem = selectedItem }
+    func pasteSelection() { if let item = selectedItem { onPaste?(item) } }
+    func pasteNumberedItem(_ index: Int) {
+        guard filteredItems.indices.contains(index) else { return }
+        onPaste?(filteredItems[index])
+    }
     func copySelection() { if let item = selectedItem { copy(item) } }
     func copy(_ item: HistoryItem) { onCopy?(item) }
     func copyNumberedItem(_ index: Int) {

@@ -194,8 +194,11 @@ struct Phase2Checks {
             panel.window?.setFrameAutosaveName("")
             UserDefaults.standard.removeObject(forKey: "NSWindow Frame \(frameName)")
         }
+        assert(panel.window!.level == .popUpMenu)
+        assert(HistoryPanelController.presentationLevel(spotlightLayers: [25]).rawValue > 25)
+        assert(HistoryPanelController.presentationLevel(spotlightLayers: [101, 102]).rawValue > 102)
         var copyCount = 0
-        uiModel.onCopy = { item in
+        uiModel.onPaste = { item in
             copyCount += 1
             assert(writer.write(item.snapshot))
             panel.dismiss()
@@ -223,8 +226,11 @@ struct Phase2Checks {
         assert(copyCount == 1 && !panel.window!.isVisible)
         assert(pasteboard.string(forType: .string) == uiStore.items[1].content)
         openPanel()
+        key("\u{f701}", code: 125)
+        assert(uiModel.selectedID == uiStore.items[1].id, "Down arrow must select the next clipping")
         key("\r", code: 36)
-        assert(copyCount == 2 && !panel.window!.isVisible, "Return copies and dismisses")
+        assert(pasteboard.string(forType: .string) == uiStore.items[1].content)
+        assert(copyCount == 2 && !panel.window!.isVisible, "Return activates the selected clipping and dismisses")
         openPanel()
         panel.window!.setContentSize(NSSize(width: 480, height: 520))
         RunLoop.main.run(until: Date().addingTimeInterval(0.1))
@@ -244,7 +250,40 @@ struct Phase2Checks {
         openPanel()
         assert(panel.window!.contentView!.bounds.size == NSSize(width: 480, height: 520))
         key("\u{1B}", code: 53)
-        print("PASS: typing in search, ⌘2 copy-back, Return copy-back, double-click preview, Escape, and retained resize")
+        print("PASS: history above Spotlight levels; typing, ⌘2 and arrow/Enter activation, double-click preview, Escape, and retained resize")
+
+        for index in 0..<80 {
+            uiStore.record(snapshot("Scroll regression item \(index)"))
+        }
+        uiModel.historyDidChange()
+        openPanel()
+        func scrollViews(in view: NSView) -> [NSScrollView] {
+            (view as? NSScrollView).map { [$0] } ?? view.subviews.flatMap { scrollViews(in: $0) }
+        }
+        let historyScroll = scrollViews(in: panel.window!.contentView!).first {
+            ($0.documentView?.bounds.height ?? 0) > $0.contentView.bounds.height + 200
+        }!
+        let document = historyScroll.documentView!
+        uiModel.selectedID = uiStore.items.last!.id
+        RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+        let top = document.isFlipped ? 0 : document.bounds.height - historyScroll.contentView.bounds.height
+        assert(abs(historyScroll.contentView.bounds.minY - top) > 100,
+               "Selecting an older row must first scroll away from the latest entries")
+        let reusedSelection = uiModel.selectedItem!
+        uiStore.promote(reusedSelection, changeCount: 99)
+        uiModel.historyDidChange()
+        panel.dismiss()
+        openPanel()
+        assert(uiModel.selectedID == reusedSelection.id && uiModel.selectedID == uiStore.items.first?.id)
+        let reopenedScroll = scrollViews(in: panel.window!.contentView!).first {
+            ($0.documentView?.bounds.height ?? 0) > $0.contentView.bounds.height + 200
+        }!
+        let reopenedDocument = reopenedScroll.documentView!
+        let reopenedTop = reopenedDocument.isFlipped ? 0 : reopenedDocument.bounds.height - reopenedScroll.contentView.bounds.height
+        assert(abs(reopenedScroll.contentView.bounds.minY - reopenedTop) < 2,
+               "Reopening must put ⌘1 at the top even when the selected ID is unchanged")
+        panel.dismiss()
+        print("PASS: reopening a scrolled retained panel resets the viewport to the latest row")
 
         monitor.start()
         externalCopy("timer-driven capture")
@@ -256,6 +295,73 @@ struct Phase2Checks {
         RunLoop.main.run(until: Date().addingTimeInterval(0.5))
         assert(reads == before)
         print("PASS: scheduled monitoring and stopping the timer")
+
+        // Exercise automatic paste without requesting system access or posting keyboard events.
+        var trusted = false
+        var prompts = 0
+        var targetAlive = true
+        var targetActive = false
+        var keysReleased = false
+        var clipboardCurrent = true
+        var posts = 0
+        var activations = 0
+        var failures: [String] = []
+        let paste = ClipboardPaster(permission: { prompt in
+            if prompt { prompts += 1 }
+            return trusted
+        }, frontmost: {
+            ClipboardPaster.Destination(isRunning: { targetAlive }, isActive: { targetActive }, activate: { activations += 1 })
+        }, modifiersReleased: { keysReleased }, clipboardUnchanged: { _ in clipboardCurrent }, postPaste: {
+            posts += 1
+            return true
+        })
+        func settlePaste(_ seconds: TimeInterval = 0.1) {
+            RunLoop.main.run(until: Date().addingTimeInterval(seconds))
+        }
+        paste.captureDestination()
+        assert(paste.preparationError() != nil && prompts == 1 && posts == 0)
+        trusted = true
+        assert(paste.preparationError() == nil)
+        paste.paste(changeCount: 1) { failures.append($0) }
+        settlePaste()
+        assert(activations == 1 && posts == 0, "Paste must wait for the original app to regain focus")
+        targetActive = true
+        settlePaste()
+        assert(posts == 0, "Paste must wait until shortcut modifiers are released")
+        keysReleased = true
+        settlePaste()
+        assert(posts == 1 && failures.isEmpty)
+        settlePaste()
+        assert(posts == 1, "Send exactly one Paste per selection")
+        paste.captureDestination()
+        paste.paste(changeCount: 1) { failures.append($0) }
+        settlePaste()
+        assert(posts == 2 && activations == 1,
+               "Do not reactivate an already-frontmost app: that dismisses Spotlight before Paste")
+        paste.paste(changeCount: 1) { failures.append($0) }
+        clipboardCurrent = false
+        settlePaste()
+        assert(posts == 2 && failures.count == 1, "Never paste a clipboard replaced during focus restoration")
+        clipboardCurrent = true
+        paste.paste(changeCount: 2) { failures.append($0) }
+        paste.cancel()
+        settlePaste()
+        assert(posts == 2 && failures.count == 1)
+        paste.paste(changeCount: 2) { failures.append($0) }
+        targetAlive = false
+        settlePaste()
+        assert(posts == 2 && failures.count == 2)
+        assert(paste.preparationError() != nil)
+        targetAlive = true
+        trusted = false
+        paste.paste(changeCount: 2) { failures.append($0) }
+        settlePaste()
+        assert(posts == 2 && failures.count == 3, "Recheck permission immediately before posting")
+        let noDestination = ClipboardPaster(permission: { _ in true }, frontmost: { nil },
+            modifiersReleased: { true }, clipboardUnchanged: { _ in true }, postPaste: { assertionFailure("No destination"); return false })
+        noDestination.captureDestination()
+        assert(noDestination.preparationError() != nil)
+        print("PASS: paste permission, destination focus, modifier release, single delivery, cancellation, changed clipboard, and terminated destination")
 
         var invocations = 0
         let hotKey = HistoryHotKey { invocations += 1 }

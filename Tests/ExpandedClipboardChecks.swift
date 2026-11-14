@@ -40,6 +40,11 @@ struct ExpandedClipboardChecks {
             for (original, output) in zip(snapshot.items, restored) {
                 for representation in original.representations {
                     if representation.type == "NSFilenamesPboardType" { continue }
+                    if snapshot.kind == .image && original.imageData != nil && ClipboardWriter.isImageTextFallback(representation) {
+                        assert(output.data(forType: NSPasteboard.PasteboardType(representation.type)) == nil,
+                               "Image pastes must not offer browser text or HTML instead of the image")
+                        continue
+                    }
                     assert(output.data(forType: NSPasteboard.PasteboardType(representation.type)) == representation.data,
                            "Native representations must survive copy-back exactly")
                 }
@@ -100,6 +105,25 @@ struct ExpandedClipboardChecks {
                "An unreadable first image format must fall back to the valid alternative")
         roundTrip(image)
         assert((board.readObjects(forClasses: [NSImage.self], options: nil) as? [NSImage])?.first != nil)
+        let browserImage = capture([native([(.png, png), (.html, bytes("<img src='https://example.invalid/picture.png' alt='image label'>")),
+            (.string, bytes("image label")), (.URL, bytes("https://example.invalid/picture.png"))])])
+        roundTrip(browserImage)
+        assert(board.data(forType: .png) == png && board.data(forType: .tiff) != nil)
+        assert(board.string(forType: .string) == nil && board.data(forType: .html) == nil && board.data(forType: .URL) == nil)
+        let restoredBrowserImage = (board.readObjects(forClasses: [NSImage.self], options: nil) as? [NSImage])!.first!
+        let nativeBitmap = NSBitmapImageRep(data: restoredBrowserImage.tiffRepresentation!)!
+        assert(nativeBitmap.pixelsWide == 64 && nativeBitmap.pixelsHigh == 32,
+               "Image copy-back must retain original resolution, not the thumbnail")
+        let svg = capture([native([(NSPasteboard.PasteboardType("public.svg-image"),
+            bytes("<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><rect width='10' height='10' fill='red'/></svg>"))])])
+        assert(svg.kind == .image)
+        roundTrip(svg)
+        let beforeBrokenImage = board.changeCount
+        let brokenImage = ClipboardSnapshot(content: "Image · 64 × 32", kind: .image,
+            changeCount: 0, capturedAt: Date(), sourceApplicationID: nil)
+        assert(!writer.write(brokenImage) && writer.lastError != nil && board.changeCount == beforeBrokenImage,
+               "An old image without payload must never overwrite the clipboard with its label")
+
         let portraitContext = CGContext(data: nil, width: 32, height: 64, bitsPerComponent: 8, bytesPerRow: 0,
             space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
         portraitContext.setFillColor(CGColor(red: 0, green: 1, blue: 0, alpha: 1))
@@ -226,13 +250,18 @@ struct ExpandedClipboardChecks {
         print("PASS: native multi-file/folder copies, Xcode project references, bookmarks, moved/missing files, and legacy file lists")
 
         let archive = JSONHistoryPersistence(fileURL: directory.appendingPathComponent("saved/History.json"))
-        let saved = [portraitImage, finderImage, image, legacyFiles, code, rich, html, richPackage, pdf, generic, multiple, binaryGroups].map { HistoryItem(snapshot: $0) }
+        let saved = [browserImage, portraitImage, finderImage, image, legacyFiles, code, rich, html, richPackage, pdf, generic, multiple, binaryGroups].map { HistoryItem(snapshot: $0) }
         try archive.save(saved)
         let loaded = try archive.load()
         assert(loaded.map(\.id) == saved.map(\.id))
         for (before, after) in zip(saved, loaded) {
             assert(before.snapshot.items == after.snapshot.items && before.kind == after.kind && before.content == after.content)
             roundTrip(after.snapshot)
+            if after.id == saved[0].id {
+                assert(board.data(forType: .png) == png && board.data(forType: .tiff) != nil)
+                assert(board.string(forType: .string) == nil && board.data(forType: .html) == nil,
+                       "Persisted browser images must paste as images after relaunch")
+            }
         }
         let migrationURL = directory.appendingPathComponent("version-one.json")
         let oldID = UUID()

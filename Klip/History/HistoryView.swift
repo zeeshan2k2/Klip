@@ -133,7 +133,7 @@ struct HistoryView: View {
                 .textFieldStyle(.plain)
                 .font(.system(size: 15))
                 .focused($searchFocused)
-                .onSubmit { model.copySelection() }
+                .onSubmit { model.pasteSelection() }
                 .accessibilityLabel("Search clipboard history")
 
             if !model.query.isEmpty {
@@ -178,7 +178,10 @@ struct HistoryView: View {
             .onChange(of: model.selectedID) { _, selectedID in
                 if let selectedID { proxy.scrollTo(selectedID) }
             }
+
         }
+        // Give each opening a fresh viewport; keep the window and model intact.
+        .id(model.presentationCount)
     }
 
     private var emptyState: some View {

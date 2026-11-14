@@ -23,7 +23,7 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate {
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
-        panel.level = .floating
+        panel.level = .popUpMenu
         panel.hidesOnDeactivate = false
         panel.isMovable = true
         panel.isMovableByWindowBackground = false
@@ -52,11 +52,26 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate {
     }
 
     override func showWindow(_ sender: Any?) {
+        // Spotlight sits above ordinary floating windows. Read only owner/level
+        // metadata, so this does not need Screen Recording permission.
+        let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
+        let spotlightLayers = windows.compactMap { info -> Int? in
+            guard let pid = info[kCGWindowOwnerPID as String] as? Int32 else { return nil }
+            let owner = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier
+            guard owner == "com.apple.Spotlight" || info[kCGWindowOwnerName as String] as? String == "Spotlight" else { return nil }
+            return info[kCGWindowLayer as String] as? Int
+        }
+        window?.level = Self.presentationLevel(spotlightLayers: spotlightLayers)
+        model.presentationCount &+= 1
         model.isPanelPresented = true
         super.showWindow(sender)
         window?.orderFrontRegardless()
         window?.makeKey()
         startDismissalMonitors()
+    }
+
+    static func presentationLevel(spotlightLayers: [Int]) -> NSWindow.Level {
+        NSWindow.Level(rawValue: max(NSWindow.Level.popUpMenu.rawValue, (spotlightLayers.max() ?? 0) + 1))
     }
 
     func dismiss() {
@@ -99,6 +114,12 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate {
                         return true
                     }
                     let modifiers = event.modifierFlags.intersection([.command, .control, .option, .shift])
+                    if [36, 76].contains(event.keyCode), modifiers.isEmpty,
+                       event.window === panel, panel.attachedSheet == nil,
+                       self.model.inspectedItem == nil {
+                        if !event.isARepeat { self.model.pasteSelection() }
+                        return true
+                    }
                     if modifiers == .command, event.charactersIgnoringModifiers == "," {
                         self.model.onShowSettings?()
                         return true
@@ -107,7 +128,7 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate {
                        self.model.inspectedItem == nil,
                        let characters = event.charactersIgnoringModifiers,
                        let number = Int(characters), (1...9).contains(number) {
-                        self.model.copyNumberedItem(number - 1)
+                        self.model.pasteNumberedItem(number - 1)
                         return true
                     }
                     return false
