@@ -16,10 +16,15 @@
 
 <p align="center">
   <a href="#features">Features</a> ·
+  <a href="#see-it-in-action">Demos</a> ·
   <a href="#installation">Installation</a> ·
   <a href="#usage">Usage</a> ·
   <a href="#privacy">Privacy</a> ·
   <a href="#contributing">Contributing</a>
+</p>
+
+<p align="center">
+  <img src="assets/screenshots/history.png" width="640" alt="Klip clipboard history showing sample text, a link, an image thumbnail, and a folder">
 </p>
 
 ## Features
@@ -35,6 +40,24 @@
 - **Control what gets captured.** Pause monitoring, exclude apps, hide previews, or turn off saved history.
 
 Built with SwiftUI and AppKit. Requires **macOS 15.4 or later**.
+
+## See it in action
+
+### Copy from history
+
+Choose an entry, select **Copy** from its context menu, then press **⌘V** in the destination app.
+
+<p align="center">
+  <img src="assets/demos/copy-back.gif" width="900" alt="Selecting a sample history entry, choosing Copy, and pasting it into TextEdit with Command-V">
+</p>
+
+### A glance at what you copied
+
+The notch preview appears after copying and retracts automatically.
+
+<p align="center">
+  <img src="assets/demos/notch-preview.gif" width="384" alt="Klip’s content preview appearing beneath the notch after a copy, then retracting">
+</p>
 
 ## Installation
 
@@ -66,9 +89,19 @@ open Klip.xcodeproj
 
 Launch at login requires an installed, signed build. Registration status appears in Settings.
 
+To create a local DMG, use a certificate-backed signing identity from your keychain:
+
+```sh
+KLIP_SIGNING_IDENTITY="Apple Development: Your Name (CERTIFICATE_ID)" \
+  ./scripts/create-dmg.sh ~/Desktop/Klip-local.dmg
+```
+
+Keep the same signing identity across updates so macOS can recognize Klip’s existing permissions. The script rejects ad-hoc signing. For public distribution, use a **Developer ID Application** identity and notarize the app before packaging.
+
+
 ## Usage
 
-Copy something as usual, then press **⌘⇧V** or choose **Show Clipboard** from the menu bar. Search for an entry, select it, and press **Return** to paste it into the app you were using. On first use, allow Klip in **System Settings → Privacy & Security → Accessibility**. Until permission is granted, the item is copied and you can paste it manually with **⌘V**.
+Copy something as usual, then press **⌘⇧V** or choose **Show Clipboard** from the menu bar. Search for an entry, select it, and press **Return** to paste it into the app you were using. On first use, allow Klip in **System Settings → Privacy & Security → Accessibility**. If automatic paste is unavailable, choose **Copy** from the entry’s context menu and paste manually with **⌘V**.
 
 | Action | Shortcut or control |
 | --- | --- |
