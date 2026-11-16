@@ -160,6 +160,14 @@ struct Phase3Checks {
         let join = bitmap.colorAt(x: bitmap.pixelsWide / 2, y: 1)!.usingColorSpace(.deviceRGB)!
         assert(join.alphaComponent > 0.99 && join.redComponent < 0.01 && join.greenComponent < 0.01 && join.blueComponent < 0.01,
                "The attachment must be solid black rather than a glass capsule")
+        let bodyColumns = (0..<bitmap.pixelsWide).filter {
+            bitmap.colorAt(x: $0, y: bitmap.pixelsHigh / 2)!.alphaComponent > 0.9
+        }
+        for y in 0..<bitmap.pixelsHigh / 2 {
+            let joinColumns = (0..<bitmap.pixelsWide).filter { bitmap.colorAt(x: $0, y: y)!.alphaComponent > 0.1 }
+            assert(joinColumns.allSatisfy { $0 >= bodyColumns.first! - 1 && $0 <= bodyColumns.last! + 1 },
+                   "The upper join must not form outward horizontal spikes beyond the popup sides")
+        }
         let sample = ClipboardSnapshot(content: "A compact preview of the text just copied.\nSecond line stays inside the notch.",
             kind: .text, changeCount: 1, capturedAt: Date(), sourceApplicationID: nil)
         popup.setPreview(sample)

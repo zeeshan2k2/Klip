@@ -47,7 +47,7 @@ struct PopupView: View {
                 .padding(.vertical, state.previewIsImage && state.previewImage != nil
                     ? PopupLayout.previewHorizontalPadding : PopupLayout.previewPadding)
                 .padding(.horizontal, PopupLayout.previewHorizontalPadding)
-                // Shoulders are outside the straight black body; keep exactly
+                // Keep attachment insets outside the straight black body and
                 // ten points between the content box and each horizontal body edge.
                 .frame(width: state.width - PopupLayout.shoulder * 2, height: PopupLayout.previewSize.height)
                 .transition(.opacity)
@@ -78,24 +78,24 @@ struct PopupView: View {
     }
 }
 
-/// Concave shoulders join the notch, with softly rounded lower corners.
+/// An upward-curved join stays inside the notch sides, with rounded lower corners.
 private struct NotchExtension: Shape {
     func path(in rect: CGRect) -> Path {
         let shoulder = min(PopupLayout.shoulder, rect.height / 2)
         let radius = min(PopupLayout.bottomRadius, rect.height / 2)
+        let joinInset = min(PopupLayout.topCurveDepth, shoulder)
         var path = Path()
-        path.move(to: CGPoint(x: 0, y: 0))
-        path.addLine(to: CGPoint(x: rect.width, y: 0))
-        path.addQuadCurve(to: CGPoint(x: rect.width - shoulder, y: shoulder),
-                          control: CGPoint(x: rect.width - shoulder, y: 0))
+        path.move(to: CGPoint(x: shoulder, y: joinInset))
+        // Curve upward inside the body width, without protruding side tips.
+        path.addQuadCurve(to: CGPoint(x: rect.width - shoulder, y: joinInset),
+                          control: CGPoint(x: rect.midX, y: -joinInset))
         path.addLine(to: CGPoint(x: rect.width - shoulder, y: rect.height - radius))
         path.addQuadCurve(to: CGPoint(x: rect.width - shoulder - radius, y: rect.height),
                           control: CGPoint(x: rect.width - shoulder, y: rect.height))
         path.addLine(to: CGPoint(x: shoulder + radius, y: rect.height))
         path.addQuadCurve(to: CGPoint(x: shoulder, y: rect.height - radius),
                           control: CGPoint(x: shoulder, y: rect.height))
-        path.addLine(to: CGPoint(x: shoulder, y: shoulder))
-        path.addQuadCurve(to: .zero, control: CGPoint(x: shoulder, y: 0))
+        path.addLine(to: CGPoint(x: shoulder, y: joinInset))
         path.closeSubpath()
         return path
     }

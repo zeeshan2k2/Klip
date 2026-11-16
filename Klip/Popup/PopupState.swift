@@ -40,14 +40,15 @@ enum PopupLayout {
             let iconWidth: CGFloat = state.previewImage == nil ? 20 : 32
             contentWidth = iconWidth + 5 + ceil(text.size().width)
         }
-        // Concave shoulders sit outside the straight body. Body padding remains
+        // Attachment insets sit outside the straight body. Body padding remains
         // ten points horizontally; the existing notch width caps the complete surface.
         return min(maximum, ceil(contentWidth + previewHorizontalPadding * 2 + shoulder * 2))
     }
 
     static let bottomRadius: CGFloat = 12
     static let shoulder: CGFloat = 8
-    static let notchOverlap: CGFloat = 2
+    static let topCurveDepth: CGFloat = 2
+    static let notchOverlap: CGFloat = 3
     static let fallbackNotchWidth: CGFloat = 180
     static let retractionDuration: TimeInterval = 0.24
 }
@@ -102,8 +103,8 @@ enum PopupPlacement {
         let width = hasNotch
             ? min(PopupLayout.size.width, min(notchWidth + PopupLayout.shoulder * 2, display.frame.width - 16))
             : PopupLayout.size.width
-        // Overlap the notch by two points so there is no floating gap. Displays
-        // without a hardware notch get a small extension from the top edge.
+        // A small overlap covers the antialiased seam at the hardware edge.
+        // Displays without a notch attach directly to the top screen edge.
         let top = hasNotch
             ? display.frame.maxY - display.topInset + PopupLayout.notchOverlap
             : display.frame.maxY
